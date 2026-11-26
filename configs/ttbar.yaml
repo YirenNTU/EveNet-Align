@@ -1,0 +1,84 @@
+# Dileptonic ttbar, paper recipe: start from the supervised epoch-115 EveNet, K6,
+# 2,048 events per update, refit every 500 updates on all training events with
+# plateau selection, validation every 50 updates with one DDIM20 draw per event.
+# Paths are placeholders; set them with --set (see README, "Paper runs").
+experiment: ttbar
+results: results
+device: cuda
+seeds: [42]
+dataset:
+  source: parquet
+  path: null
+  train_parquet: parquet/ttbar/train
+  validation_parquet: parquet/ttbar/validation
+  derive: evenet_align.examples.ttbar:derive
+  extra: []
+  observed: [x, x_mask, conditions, conditions_mask, classification]
+  target: x_invisible
+  pseudo: tau
+  n_train: 8192
+  n_validation: 2048
+  seed: 1234
+policy:
+  name: evenet
+  evenet:
+    checkpoint: pretrained/ttbar-epoch115/checkpoint.ckpt
+    config: pretrained/ttbar-epoch115/config.yaml
+    normalization: pretrained/ttbar-epoch115/normalization.pt
+    source: null
+    activation_checkpointing: false   # true needs an EveNet build with evenet.utilities.partial_checkpointing (set source)
+    activation_memory_mode: null      # e.g. recompute; needs evenet.utilities.activation_offload
+    float32_matmul_precision: high
+  mlp:
+    hidden: 128
+    depth: 3
+    time_frequencies: 16
+    supervised_steps: 3000
+    batch_size: 512
+    learning_rate: 0.001
+    weight_decay: 0.0
+  custom:                # policy.name: custom -> your own model, see evenet_align/examples/custom_policy.py
+    function: null
+    params: {}
+    files: []
+oracle:
+  function: evenet_align.examples.ttbar:top_momentum_oracle
+  params: {}
+dgpo:
+  steps: 15000
+  candidates: 6
+  batch_size: 2048
+  oracle_fraction: 0.3
+  beta: 1.0
+  trust_coefficient: 1.0
+  train_timesteps: 6
+  t_min: 0.0
+  t_max: 0.7
+  learning_rate: 5.0e-05
+  weight_decay: 0.01
+  grad_clip_norm: 1.0
+  ddim_steps: 20
+  validate_every: 50
+  refit_every: 500
+  checkpoint_every: 50
+classifier:
+  features:
+    function: evenet_align.examples.ttbar:top_features
+    params: {}
+  fit_events: null
+  validation_fraction: 0.2
+  batch_size: 32768
+  learning_rate: 0.0001
+  min_learning_rate: 1.0e-05
+  lr_decay_epochs: 1500
+  weight_decay: 0.005
+  dropout: 0.1
+  grad_clip_norm: 1.0
+  max_epochs: 3000
+  min_updates: 1000
+  patience: 25
+  min_delta: 0.0001
+  require_plateau: true
+  ratio_bound: 30.0
+validation:
+  ddim_steps: 20

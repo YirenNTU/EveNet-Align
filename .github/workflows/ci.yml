@@ -1,0 +1,31 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install torch --index-url https://download.pytorch.org/whl/cpu
+      - run: pip install -e ".[dev]"
+      - run: lint-imports
+      - run: python -m pytest -q
+      - run: python scripts/run.py configs/smoke.yaml && python scripts/summarize.py results/smoke --output figures/smoke
+
+  evenet:
+    # The EveNet policy against the released evenet-core package and EveNet-Full's configs.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: EveNet-HEP/EveNet-Full
+          path: EveNet-Full
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install torch --index-url https://download.pytorch.org/whl/cpu
+      - run: pip install -e ".[evenet,dev]"
+      - run: EVENET_SHARE=$PWD/EveNet-Full/share python -m pytest -q -m evenet

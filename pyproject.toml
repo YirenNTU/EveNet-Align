@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "evenet-align"
+version = "0.1.0"
+description = "Preference optimization (DGPO) of conditional diffusion models for neutrino reconstruction"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
+dependencies = ["torch>=2.1", "numpy>=1.24", "pyyaml>=6"]
+
+[project.optional-dependencies]
+evenet = ["evenet-core>=0.3", "pyarrow>=14,<26"]  # evenet-core 0.3 pins numpy 1.26; pyarrow 26 needs numpy 2
+plot = ["matplotlib>=3.7"]
+dev = ["pytest>=7", "import-linter>=2", "matplotlib>=3.7", "pyarrow>=14"]
+
+[tool.setuptools.packages.find]
+include = ["evenet_align*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["slow: end-to-end runs of the smoke config", "evenet: needs evenet-core and EVENET_SHARE"]
+
+[tool.importlinter]
+root_package = "evenet_align"
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "Dependencies point inward: experiments -> core"
+type = "layers"
+layers = ["evenet_align.experiments", "evenet_align.core"]
+
+[[tool.importlinter.contracts]]
+name = "core imports nothing outside core"
+type = "forbidden"
+source_modules = ["evenet_align.core"]
+forbidden_modules = ["evenet_align.experiments", "evenet_align.analysis", "evenet_align.examples", "yaml"]
+
+[[tool.importlinter.contracts]]
+name = "examples (user-side oracles and features) use core types only"
+type = "forbidden"
+source_modules = ["evenet_align.examples"]
+forbidden_modules = ["evenet_align.experiments", "evenet_align.analysis"]
+
+[[tool.importlinter.contracts]]
+name = "analysis reads results only"
+type = "forbidden"
+source_modules = ["evenet_align.analysis"]
+forbidden_modules = ["evenet_align.experiments", "evenet_align.core", "torch"]

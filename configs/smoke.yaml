@@ -1,0 +1,85 @@
+# Smoke test: the same code path and keys as configs/ttbar.yaml and configs/ztautau.yaml at a size that
+# finishes in about ten seconds on a laptop CPU, with the reference MLP policy
+# and pseudo Z->tautau events (no EveNet needed). Used by CI and the tests.
+experiment: smoke
+results: results
+device: cpu
+seeds: [0]
+dataset:
+  source: pseudo
+  path: null
+  train_parquet: null
+  validation_parquet: null
+  derive: null
+  extra: []
+  observed: [condition]
+  target: target
+  pseudo: tau
+  n_train: 4096
+  n_validation: 1024
+  seed: 1234
+policy:
+  name: mlp
+  evenet:
+    checkpoint: null
+    config: null
+    normalization: null
+    source: null
+    activation_checkpointing: false
+    activation_memory_mode: null
+    float32_matmul_precision: null
+  mlp:
+    hidden: 64
+    depth: 2
+    time_frequencies: 8
+    supervised_steps: 300
+    batch_size: 256
+    learning_rate: 2.0e-3
+    weight_decay: 0.0
+  custom:                # policy.name: custom -> your own model, see evenet_align/examples/custom_policy.py
+    function: null
+    params: {}
+    files: []
+oracle:
+  function: evenet_align.examples.tau:momentum_oracle
+  params:
+    fixed_energy_GeV: 45.6
+    tau_mass_GeV: 1.777
+dgpo:
+  steps: 20
+  candidates: 4
+  batch_size: 256
+  oracle_fraction: 0.3
+  beta: 1.0
+  trust_coefficient: 1.0
+  train_timesteps: 6
+  t_min: 0.0
+  t_max: 0.7
+  learning_rate: 5.0e-5
+  weight_decay: 0.01
+  grad_clip_norm: 1.0
+  ddim_steps: 10
+  validate_every: 10
+  refit_every: 10
+  checkpoint_every: 5
+classifier:
+  features:
+    function: evenet_align.examples.tau:direction_features
+    params: {}
+  fit_events: 2048
+  validation_fraction: 0.2
+  batch_size: 512
+  learning_rate: 1.0e-3
+  min_learning_rate: 1.0e-4
+  lr_decay_epochs: 100
+  weight_decay: 0.005
+  dropout: 0.1
+  grad_clip_norm: 1.0
+  max_epochs: 100
+  min_updates: 20
+  patience: 5
+  min_delta: 1.0e-4
+  require_plateau: true
+  ratio_bound: 30.0
+validation:
+  ddim_steps: 10
